@@ -1,0 +1,22 @@
+{
+  "name": "velosense",
+  "version": "1.0.0",
+  "description": "VeloSense - Ciclocomputador GPS inteligente para ciclismo con Coach IA y sincronización Strava",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'VeloSense static assets ready'",
+    "build:apk": "gradle assembleDebug"
+  },
+  "keywords": [
+    "velosense",
+    "cycling",
+    "bike-computer",
+    "android",
+    "jetpack-compose",
+    "gps",
+    "strava"
+  ],
+  "author": "VeloSense Team",
+  "license": "MIT"
+}
