@@ -12,8 +12,14 @@ El proyecto se encuentra ubicado **directamente en la raíz del repositorio**, l
 
 ```text
 .
-├── index.html                  # Página web principal y simulador interactivo
-├── package.json                # Configuración de scripts y metadatos
+├── index.html                  # Página web principal y punto de entrada
+├── package.json                # Configuración de scripts y dependencias
+├── src/                        # Código fuente modular web
+│   ├── app.js                  # Lógica del simulador y métricas
+│   ├── styles.css              # Estilos visuales VeloSense
+│   └── assets/                 # Recursos gráficos
+├── public/                     # Recursos estáticos
+├── velosense-builder.zip       # Paquete ZIP listo para conversores (index.html en raíz)
 ├── README.md                   # Documentación del proyecto
 ├── metadata.json               # Configuración de AI Studio
 ├── .github/
@@ -28,7 +34,7 @@ El proyecto se encuentra ubicado **directamente en la raíz del repositorio**, l
 │           └── res/
 ├── build.gradle.kts            # Configuración raíz de Gradle
 ├── settings.gradle.kts         # Configuración de módulos Gradle
-└── public/                     # Recursos estáticos
+└── gradle/                     # Wrapper y versiones de Gradle
 ```
 
 ---
