@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <!-- Rounded squircle background -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M44,0 L156,0 A44,44 0 0 1 200,44 L200,156 A44,44 0 0 1 156,200 L44,200 A44,44 0 0 1 0,156 L0,44 A44,44 0 0 1 44,0 Z" />
+
+    <!-- V Left Arm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,40 L60,40 L96,136 L82,160 L72,160 L38,74 Z" />
+
+    <!-- V Right Arm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M132,40 L154,40 L122,118 L104,104 Z" />
+
+    <!-- S Upper & Spine -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78,40 L110,40 C124,40 130,48 130,60 C130,76 114,88 102,98 C92,106 86,114 86,126 C86,130 87,136 89,142 L73,142 C70,136 68,128 68,120 C68,104 80,92 92,82 C104,72 112,66 112,58 C112,52 108,48 100,48 L78,48 Z" />
+
+    <!-- S Wheel Rim -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M128,90 C146.7,90 162,105.3 162,124 C162,142.7 146.7,158 128,158 C110,158 96,144 90,130 L106,126 C110,134 118,142 128,142 C138,142 146,134 146,124 C146,114 138,106 128,106 C118,106 110,112 106,120 L92,110 C98,98 112,90 128,90 Z" />
+</vector>

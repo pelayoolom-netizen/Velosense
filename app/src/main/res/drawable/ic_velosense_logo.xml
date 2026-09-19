@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Rounded dark emblem container background -->
+    <path
+        android:fillColor="#05080C"
+        android:pathData="M 22,8 L 98,8 C 108,8 114,14 114,24 L 114,96 C 114,106 108,112 98,112 L 22,112 C 12,112 6,106 6,96 L 6,24 C 6,14 12,8 22,8 Z" />
+
+    <!-- Bicycle wheel ring behind the right leg -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M 68,52 A 20,20 0 1,1 86,76" />
+
+    <!-- Left Arm of the V (Outer facet & aerodynamic wing) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 24,30 L 40,30 L 58,84 L 54,84 L 40,46 L 30,46 L 50,86 L 46,90 L 24,30 Z" />
+
+    <!-- Main Dynamic V and Flowing Road Apex -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 28,32 L 39,32 L 56,84 L 52,94 L 46,94 Z" />
+
+    <!-- Right wing and aerodynamic central ribbon connecting to apex -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 62,32 L 86,32 L 67,68 C 65,71 63,73 60,75 L 53,89 L 49,86 C 53,78 57,69 61,58 L 52,38 C 55,34 58,32 62,32 Z" />
+
+    <!-- Aerodynamic central curve stroke -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M 64,34 C 60,42 55,50 54,58 C 53,68 56,76 52,90" />
+</vector>
