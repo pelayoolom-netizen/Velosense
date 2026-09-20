@@ -1,6 +1,6 @@
 {
   "name": "VeloSense",
-  "description": "Ciclocomputador inteligente para bicicleta con GPS, métricas en directo, potencia y cadencia estimadas, historial, Coach con IA e integración oficial con Strava",
+  "description": "Ciclocomputador inteligente para ciclismo y MTB con GPS, telemetría en tiempo real, física de potencia y cadencia estimadas, autopausa robusta, Coach y análisis detallado",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

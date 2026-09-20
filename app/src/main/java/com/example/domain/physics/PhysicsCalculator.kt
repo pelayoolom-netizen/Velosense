@@ -191,26 +191,31 @@ object PhysicsCalculator {
     }
 
     /**
-     * Calculates XP gained for a ride:
-     * - Base finish: 100 XP
-     * - 25 XP per km
-     * - 1.5 XP per meter elevation gain
-     * - 2 XP per minute moving time
+     * Calculates XP gained for a ride based fairly on real physical effort:
+     * - No free XP for non-activities (< 100m or < 30s)
+     * - Base finish: 25 XP (awarded for legitimate rides >= 500m or >= 3 min)
+     * - 20 XP per km
+     * - 1.0 XP per meter elevation gain
+     * - 1.0 XP per minute of moving time
      */
     fun calculateXp(
         distanceMeters: Double,
         elevationGainMeters: Double,
         movingTimeSeconds: Long
     ): Int {
+        if (distanceMeters < 100.0 && movingTimeSeconds < 30L) {
+            return 0
+        }
+
         val km = distanceMeters / 1000.0
         val minutes = movingTimeSeconds / 60.0
 
-        val baseXp = 100
-        val distanceXp = km * 25.0
-        val elevationXp = elevationGainMeters * 1.5
-        val timeXp = minutes * 2.0
+        val baseXp = if (distanceMeters >= 500.0 || movingTimeSeconds >= 180L) 25.0 else 5.0
+        val distanceXp = km * 20.0
+        val elevationXp = (elevationGainMeters.coerceAtLeast(0.0)) * 1.0
+        val timeXp = minutes * 1.0
 
-        return (baseXp + distanceXp + elevationXp + timeXp).roundToInt().coerceAtLeast(100)
+        return (baseXp + distanceXp + elevationXp + timeXp).roundToInt().coerceAtLeast(0)
     }
 
     /**

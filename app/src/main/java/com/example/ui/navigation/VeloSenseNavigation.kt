@@ -55,33 +55,7 @@ val bottomNavScreens = listOf(
 
 @Composable
 fun VeloSenseAppNav() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val app = context.applicationContext as com.example.VeloSenseApplication
-    val authState by app.authManager.authState.collectAsState()
-
-    when (authState) {
-        is com.example.auth.AuthState.Initializing -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(VeloDarkBg),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                CircularProgressIndicator(color = ElectricLime)
-            }
-        }
-        is com.example.auth.AuthState.Unauthenticated -> {
-            com.example.ui.screens.auth.LoginScreen(
-                authManager = app.authManager,
-                onAuthSuccess = {
-                    // Auth state automatically changes to Authenticated
-                }
-            )
-        }
-        is com.example.auth.AuthState.Authenticated -> {
-            MainAppNavigation()
-        }
-    }
+    MainAppNavigation()
 }
 
 @Composable

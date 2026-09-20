@@ -12,13 +12,15 @@ El proyecto se encuentra ubicado **directamente en la raíz del repositorio**, l
 
 ```text
 .
+├── VeloSense.apk               # APK Android listo para instalar (30 MB)
+├── app-debug.apk               # Copia directa del instalador APK
 ├── index.html                  # Página web principal y punto de entrada
 ├── package.json                # Configuración de scripts y dependencias
 ├── src/                        # Código fuente modular web
 │   ├── app.js                  # Lógica del simulador y métricas
 │   ├── styles.css              # Estilos visuales VeloSense
 │   └── assets/                 # Recursos gráficos
-├── public/                     # Recursos estáticos
+├── public/                     # Recursos estáticos (incluye public/VeloSense.apk)
 ├── velosense-builder.zip       # Paquete ZIP listo para conversores (index.html en raíz)
 ├── README.md                   # Documentación del proyecto
 ├── metadata.json               # Configuración de AI Studio
@@ -41,11 +43,15 @@ El proyecto se encuentra ubicado **directamente en la raíz del repositorio**, l
 
 ## 📱 Cómo Obtener el Archivo APK
 
-### Opción 1: Desde Google AI Studio (Recomendado)
-- En el menú superior derecho de **AI Studio**, haz clic en el botón de menú / exportación y pulsa en **"Download APK"** o **"Generate APK"**.
+### Opción 1: Directamente en la raíz de los archivos del proyecto
+El instalador APK ya se encuentra generado y colocado directamente en la raíz del proyecto:
+- **`./VeloSense.apk`**
+- **`./app-debug.apk`**
+- **`./public/VeloSense.apk`**
 
-### Opción 2: Archivo APK ya compilado
-Si has clonado o descargado el proyecto con la carpeta `build/`, el instalador se encuentra en:
+Cuando descargues los archivos del proyecto (o mediante el botón de descarga en `index.html`), solo tienes que copiar `VeloSense.apk` a tu teléfono Android e instalarlo.
+
+### Opción 2: Desde la ruta de compilación de Gradle
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```

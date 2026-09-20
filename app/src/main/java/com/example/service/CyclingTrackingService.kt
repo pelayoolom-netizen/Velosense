@@ -48,6 +48,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
+import com.example.domain.validation.ActivityValidator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -55,6 +56,7 @@ import java.util.Locale
 sealed class TrackingServiceEvent {
     data class RideSaved(val rideId: Long) : TrackingServiceEvent()
     data class RideSaveError(val errorMessage: String) : TrackingServiceEvent()
+    data class RideDiscarded(val reason: String) : TrackingServiceEvent()
 }
 
 class CyclingTrackingService : Service() {
@@ -95,6 +97,7 @@ class CyclingTrackingService : Service() {
         const val EXTRA_WHEEL_SIZE = "extra_wheel_size"
         const val EXTRA_CHAINRING = "extra_chainring"
         const val EXTRA_CASSETTE = "extra_cassette"
+        const val EXTRA_AUTO_PAUSE = "extra_auto_pause"
 
         private val _rideState = MutableStateFlow(LiveRideState())
         val rideState: StateFlow<LiveRideState> = _rideState.asStateFlow()
@@ -104,8 +107,15 @@ class CyclingTrackingService : Service() {
 
         var onRideSavedCallback: ((Long) -> Unit)? = null
         var onRideSaveErrorCallback: ((String) -> Unit)? = null
+        var onRideDiscardedCallback: ((String) -> Unit)? = null
 
-        fun startService(context: Context, activityType: String, bike: BikeEntity?, riderWeightKg: Double) {
+        fun startService(
+            context: Context,
+            activityType: String,
+            bike: BikeEntity?,
+            riderWeightKg: Double,
+            autoPause: Boolean = true
+        ) {
             val intent = Intent(context, CyclingTrackingService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_ACTIVITY_TYPE, activityType)
@@ -115,6 +125,7 @@ class CyclingTrackingService : Service() {
                 putExtra(EXTRA_WHEEL_SIZE, bike?.wheelSize ?: "29\"")
                 putExtra(EXTRA_CHAINRING, bike?.chainring ?: "32T")
                 putExtra(EXTRA_CASSETTE, bike?.cassette ?: "11-50T")
+                putExtra(EXTRA_AUTO_PAUSE, autoPause)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -173,8 +184,9 @@ class CyclingTrackingService : Service() {
                 activeChainring = intent.getStringExtra(EXTRA_CHAINRING) ?: "32T"
                 activeCassette = intent.getStringExtra(EXTRA_CASSETTE) ?: "11-50T"
                 activeBikeType = activityType
+                val autoPauseEnabled = intent.getBooleanExtra(EXTRA_AUTO_PAUSE, true)
 
-                startRide(activityType)
+                startRide(activityType, autoPauseEnabled)
             }
             ACTION_PAUSE -> {
                 pauseRideInternal()
@@ -246,7 +258,7 @@ class CyclingTrackingService : Service() {
             .build()
     }
 
-    private fun startRide(activityType: String) {
+    private fun startRide(activityType: String, autoPauseEnabled: Boolean = true) {
         val now = System.currentTimeMillis()
         metricsAccumulator = ActivityMetricsAccumulator(
             riderWeightKg = activeRiderWeightKg,
@@ -255,6 +267,7 @@ class CyclingTrackingService : Service() {
             hasPowerSensor = false,
             hasCadenceSensor = false
         )
+        metricsAccumulator.isAutoPauseEnabled = autoPauseEnabled
 
         _rideState.value = LiveRideState(
             isTracking = true,
@@ -488,6 +501,32 @@ class CyclingTrackingService : Service() {
 
                     val snapshot = metricsAccumulator.getSnapshot()
                     val processedPoints = metricsAccumulator.getProcessedPoints()
+                    val pointsCount = processedPoints.size.coerceAtLeast(finalState.trackPoints.size)
+
+                    // Validación de actividad para evitar salidas basura o micro-registros accidentales
+                    val validation = ActivityValidator.validate(
+                        distanceMeters = snapshot.distanceMeters,
+                        movingTimeSeconds = snapshot.movingTimeSeconds,
+                        elapsedTimeSeconds = snapshot.elapsedTimeSeconds,
+                        pointsCount = pointsCount
+                    )
+
+                    if (!validation.isValid) {
+                        Log.i("CyclingTrackingService", "Salida descartada por validación: ${validation.reason}")
+                        try {
+                            app.activeRideRecoveryStore.clearCheckpoint()
+                        } catch (e: Exception) {
+                            Log.w("CyclingTrackingService", "Error clearing checkpoint", e)
+                        }
+                        withContext(Dispatchers.Main) {
+                            val reason = validation.reason ?: "Salida descartada por no alcanzar el umbral mínimo de registro."
+                            _eventFlow.tryEmit(TrackingServiceEvent.RideDiscarded(reason))
+                            onRideDiscardedCallback?.invoke(reason)
+                        }
+                        _rideState.value = LiveRideState()
+                        stopForegroundCleanly()
+                        return@launch
+                    }
 
                     val rideEntity = RideEntity(
                         title = title,
@@ -560,19 +599,6 @@ class CyclingTrackingService : Service() {
                     } catch (e: Exception) {
                         Log.w("CyclingTrackingService", "Error updating XP", e)
                     }
-
-                    // Sincronización opcional con Strava si está activada
-                    // REGLA: Un error en Strava jamás afecta al guardado local
-                    if (app.stravaAuthManager.isConnected() && app.stravaAuthManager.isAutoSyncEnabled()) {
-                        serviceScope.launch(Dispatchers.IO) {
-                            try {
-                                Log.i("CyclingTrackingService", "Iniciando auto-sync con Strava para ride $savedId")
-                                app.stravaUploadManager.uploadRide(savedId, isAutomatic = true)
-                            } catch (e: Throwable) {
-                                Log.w("CyclingTrackingService", "Error en auto-sync con Strava para ride $savedId", e)
-                            }
-                        }
-                    }
                 } catch (t: Throwable) {
                     Log.e("CyclingTrackingService", "Error saving completed ride", t)
                     saveError = t
@@ -591,25 +617,25 @@ class CyclingTrackingService : Service() {
             }
 
             _rideState.value = LiveRideState()
+            stopForegroundCleanly()
+        }
+    }
 
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    stopForeground(true)
-                }
-            } catch (e: Exception) {
-                Log.w("CyclingTrackingService", "Error stopping foreground", e)
+    private fun stopForegroundCleanly() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
             }
-
-            withContext(Dispatchers.Main) {
-                try {
-                    stopSelf()
-                } catch (e: Exception) {
-                    Log.w("CyclingTrackingService", "Error stopping service", e)
-                }
-            }
+        } catch (e: Exception) {
+            Log.w("CyclingTrackingService", "Error stopping foreground", e)
+        }
+        try {
+            stopSelf()
+        } catch (e: Exception) {
+            Log.w("CyclingTrackingService", "Error stopping service", e)
         }
     }
 

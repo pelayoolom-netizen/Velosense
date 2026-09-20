@@ -40,6 +40,9 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSavedRideId = MutableStateFlow<Long?>(null)
     val lastSavedRideId: StateFlow<Long?> = _lastSavedRideId.asStateFlow()
 
+    private val _rideDiscardedEvent = MutableStateFlow<String?>(null)
+    val rideDiscardedEvent: StateFlow<String?> = _rideDiscardedEvent.asStateFlow()
+
     private val _saveErrorMessage = MutableStateFlow<String?>(null)
     val saveErrorMessage: StateFlow<String?> = _saveErrorMessage.asStateFlow()
 
@@ -67,6 +70,11 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
                         _isSaving.value = false
                         _saveErrorMessage.value = event.errorMessage
                     }
+                    is TrackingServiceEvent.RideDiscarded -> {
+                        _isSaving.value = false
+                        _rideDiscardedEvent.value = event.reason
+                        _hasRecoverableRide.value = false
+                    }
                 }
             }
         }
@@ -81,6 +89,12 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
             _isSaving.value = false
             _saveErrorMessage.value = errorMsg
         }
+
+        CyclingTrackingService.onRideDiscardedCallback = { reason ->
+            _isSaving.value = false
+            _rideDiscardedEvent.value = reason
+            _hasRecoverableRide.value = false
+        }
     }
 
     fun setActivityType(type: String) {
@@ -94,8 +108,14 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
     fun startRide() {
         val type = _selectedActivityType.value
         val bike = _selectedBike.value
-        val weight = userProfile.value.weightKg
-        CyclingTrackingService.startService(app, type, bike, weight)
+        val profile = userProfile.value
+        CyclingTrackingService.startService(
+            context = app,
+            activityType = type,
+            bike = bike,
+            riderWeightKg = profile.weightKg,
+            autoPause = profile.autoPause
+        )
     }
 
     fun pauseRide() {
@@ -119,6 +139,10 @@ class RideViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSavedRideEvent() {
         _lastSavedRideId.value = null
+    }
+
+    fun clearDiscardedRideEvent() {
+        _rideDiscardedEvent.value = null
     }
 
     fun clearSaveError() {

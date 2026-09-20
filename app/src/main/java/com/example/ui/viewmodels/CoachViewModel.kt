@@ -24,11 +24,18 @@ class CoachViewModel(application: Application) : AndroidViewModel(application) {
     private val userRepository = app.userRepository
     private val coachManager = CoachManager()
 
+    val coachProfile: StateFlow<com.example.coach.CoachInternalProfile?> = combine(
+        userRepository.profile,
+        rideRepository.allRides
+    ) { prof, rides ->
+        com.example.coach.CyclistStateEngine.evaluateProfile(prof, rides)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     private val _messages = MutableStateFlow<List<ChatMessage>>(
         listOf(
             ChatMessage(
                 isFromCoach = true,
-                content = "Hola. Soy VeloSense Coach, tu director deportivo y analista técnico de rendimiento. Analizo tus datos reales de GPS, velocidad, desnivel, vatios estimados y cadencia para ayudarte a optimizar tu rendimiento y planificar tus salidas. ¿En qué trabajamos hoy?"
+                content = "Hola. Soy tu entrenador personal de ciclismo y MTB en VeloSense. Evalúo continuamente tu nivel real, volumen semanal y datos biomecánicos para diseñar entrenamientos progresivos y analizar cada salida en detalle.\n\n¿En qué nos enfocamos hoy? Puedes pedirme analizar tu última sesión, comprobar si has mejorado o planificar tu próximo entrenamiento."
             )
         )
     )
@@ -39,11 +46,11 @@ class CoachViewModel(application: Application) : AndroidViewModel(application) {
 
     val quickQuestions = listOf(
         "Analiza mi última salida",
-        "¿He mejorado?",
+        "¿Cuál es mi nivel de ciclista?",
+        "¿He mejorado respecto a mis salidas previas?",
         "¿Qué debería entrenar mañana?",
-        "¿Cómo puedo mejorar en MTB?",
-        "¿Cómo afecta el viento a mi rendimiento?",
-        "Explícame mis datos de potencia estimada"
+        "Claves técnicas para MTB",
+        "¿Cómo afecta el viento a mis vatios?"
     )
 
     fun sendMessage(query: String) {

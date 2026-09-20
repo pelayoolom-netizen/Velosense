@@ -222,7 +222,7 @@ fun VeloSenseCoachReportCard(
                     border = BorderStroke(1.dp, Color(0xFFA78BFA).copy(alpha = 0.4f))
                 ) {
                     Text(
-                        text = "V3 ANALYTICS",
+                        text = report.cyclistTier.badge,
                         style = VeloTypography.labelSmall.copy(fontSize = 9.sp),
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFA78BFA),
@@ -231,10 +231,40 @@ fun VeloSenseCoachReportCard(
                 }
             }
 
+            // Confidence warning banner if low confidence
+            report.confidence?.let { conf ->
+                if (!conf.isReliableForDeepAnalysis) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Confianza del análisis reducida (${conf.scorePercent}%): actividad muy corta para establecer patrones de fatiga fiables.",
+                                style = VeloTypography.labelSmall.copy(fontSize = 10.sp),
+                                color = Color(0xFFFCD34D)
+                            )
+                        }
+                    }
+                }
+            }
+
             // 1. Resumen de la salida
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "1. RESUMEN DE LA SALIDA",
+                    text = "RESUMEN DEL ENTRENADOR",
                     style = VeloTypography.labelSmall.copy(fontSize = 10.sp),
                     fontWeight = FontWeight.Bold,
                     color = ElectricLime
@@ -252,7 +282,7 @@ fun VeloSenseCoachReportCard(
             // 2. Puntos fuertes
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "2. PUNTOS FUERTES",
+                    text = "LO QUE HAS HECHO BIEN",
                     style = VeloTypography.labelSmall.copy(fontSize = 10.sp),
                     fontWeight = FontWeight.Bold,
                     color = ElectricLime
@@ -274,7 +304,7 @@ fun VeloSenseCoachReportCard(
             // 3. Aspectos mejorables
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "3. ASPECTOS MEJORABLES",
+                    text = "LO QUE PUEDES MEJORAR",
                     style = VeloTypography.labelSmall.copy(fontSize = 10.sp),
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFFBBF24)
@@ -301,7 +331,7 @@ fun VeloSenseCoachReportCard(
             ) {
                 Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "4. RECOMENDACIÓN PARA LA PRÓXIMA SALIDA",
+                        text = "ENTRENAMIENTO / SIGUIENTE PASO",
                         style = VeloTypography.labelSmall.copy(fontSize = 9.sp),
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFA78BFA)

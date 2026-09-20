@@ -1,5 +1,8 @@
 package com.example.ui.screens.ride
 
+import android.app.Activity
+import android.view.WindowManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -31,12 +34,26 @@ fun ActiveRideScreen(
     viewModel: RideViewModel,
     onRideFinished: (Long) -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val userProfile by viewModel.userProfile.collectAsState()
     val liveState by viewModel.liveRideState.collectAsState()
     val lastSavedId by viewModel.lastSavedRideId.collectAsState()
+    val rideDiscardedReason by viewModel.rideDiscardedEvent.collectAsState()
     val saveErrorMessage by viewModel.saveErrorMessage.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
 
     var showFinishConfirmation by remember { mutableStateOf(false) }
+
+    // Screen wake lock: Keep screen on during active tracking if enabled in user settings
+    DisposableEffect(liveState.isTracking, userProfile.keepScreenOn) {
+        if (liveState.isTracking && userProfile.keepScreenOn) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     LaunchedEffect(lastSavedId) {
         lastSavedId?.let { id ->
@@ -441,21 +458,30 @@ fun ActiveRideScreen(
 
     // Confirmation Dialog to Finish Ride
     if (showFinishConfirmation) {
+        val isShortRide = liveState.durationSeconds < 15 || liveState.distanceMeters < 35.0
         AlertDialog(
             onDismissRequest = { if (!isSaving) showFinishConfirmation = false },
             title = {
                 Text(
-                    "¿Finalizar salida en bicicleta?",
+                    if (isShortRide) "¿Detener y descartar salida?" else "¿Finalizar salida en bicicleta?",
                     style = VeloTypography.headlineSmall,
                     color = VeloTextPrimary
                 )
             },
             text = {
-                Text(
-                    "Se guardará la ruta completa con todas las métricas de GPS, altitud, vatios estimados y ganarás +${liveState.earnedXp} XP.",
-                    style = VeloTypography.bodyMedium,
-                    color = VeloTextSecondary
-                )
+                if (isShortRide) {
+                    Text(
+                        "Esta salida tiene muy poca duración (${liveState.durationSeconds} s) o distancia (${String.format(Locale.US, "%.0f", liveState.distanceMeters)} m). Para mantener tu historial limpio y sin registros vacíos, no se guardará.",
+                        style = VeloTypography.bodyMedium,
+                        color = VeloTextSecondary
+                    )
+                } else {
+                    Text(
+                        "Se guardará la ruta completa con todas las métricas de GPS, altitud, vatios estimados y ganarás +${liveState.earnedXp} XP.",
+                        style = VeloTypography.bodyMedium,
+                        color = VeloTextSecondary
+                    )
+                }
             },
             confirmButton = {
                 Button(
@@ -464,9 +490,12 @@ fun ActiveRideScreen(
                         viewModel.stopRide()
                     },
                     enabled = !isSaving,
-                    colors = ButtonDefaults.buttonColors(containerColor = ElectricLime, contentColor = VeloDarkBg)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isShortRide) VeloError else ElectricLime,
+                        contentColor = if (isShortRide) Color.White else VeloDarkBg
+                    )
                 ) {
-                    Text("Guardar y finalizar", fontWeight = FontWeight.Bold)
+                    Text(if (isShortRide) "Detener y descartar" else "Guardar y finalizar", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -474,7 +503,42 @@ fun ActiveRideScreen(
                     onClick = { showFinishConfirmation = false },
                     enabled = !isSaving
                 ) {
-                    Text("Cancelar", color = VeloTextSecondary)
+                    Text(if (isShortRide) "Continuar ruta" else "Cancelar", color = VeloTextSecondary)
+                }
+            },
+            containerColor = VeloDarkCard
+        )
+    }
+
+    if (rideDiscardedReason != null) {
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.clearDiscardedRideEvent()
+                onRideFinished(-1L)
+            },
+            title = {
+                Text(
+                    "Salida descartada",
+                    style = VeloTypography.headlineSmall,
+                    color = VeloTextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = rideDiscardedReason ?: "La actividad no alcanzó el umbral mínimo (35 metros o 15 segundos) y no se guardó en el historial.",
+                    style = VeloTypography.bodyMedium,
+                    color = VeloTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearDiscardedRideEvent()
+                        onRideFinished(-1L)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ElectricLime, contentColor = VeloDarkBg)
+                ) {
+                    Text("Aceptar", fontWeight = FontWeight.Bold)
                 }
             },
             containerColor = VeloDarkCard

@@ -131,6 +131,7 @@ class ActivityMetricsAccumulator(
     private var pausedTimeSec: Long = 0L
     private var isManuallyPaused: Boolean = false
     private var isAutoPausedInternal: Boolean = false
+    var isAutoPauseEnabled: Boolean = true
     private var consecutiveStoppedSeconds: Double = 0.0
 
     // Distance tracking (high precision Double)
@@ -203,8 +204,23 @@ class ActivityMetricsAccumulator(
 
         elapsedTimeSec += 1
 
-        if (isManuallyPaused || isAutoPausedInternal) {
-            pausedTimeSec = elapsedTimeSec - movingTimeSec
+        if (isAutoPauseEnabled && !isManuallyPaused) {
+            val timeSinceLastPointSec = if (lastPointTimestamp > 0L) (System.currentTimeMillis() - lastPointTimestamp) / 1000.0 else 0.0
+            val isStationary = currentFilteredSpeedKmh < STATIONARY_SPEED_THRESHOLD_KMH || timeSinceLastPointSec >= 3.0
+            if (isStationary) {
+                consecutiveStoppedSeconds += 1.0
+                if (consecutiveStoppedSeconds >= AUTO_PAUSE_CONFIRM_SECONDS) {
+                    isAutoPausedInternal = true
+                    currentFilteredSpeedKmh = 0.0
+                }
+            }
+        } else if (!isAutoPauseEnabled) {
+            isAutoPausedInternal = false
+            consecutiveStoppedSeconds = 0.0
+        }
+
+        if (isManuallyPaused || (isAutoPauseEnabled && isAutoPausedInternal)) {
+            pausedTimeSec = (elapsedTimeSec - movingTimeSec).coerceAtLeast(0L)
         } else {
             // Actively in motion
             movingTimeSec += 1
@@ -336,16 +352,21 @@ class ActivityMetricsAccumulator(
 
         // 7. Auto-pause & Moving Detection
         val isMovingNow = currentFilteredSpeedKmh >= 2.0 || effectiveStepDist >= 1.0
-        if (!isMovingNow) {
-            consecutiveStoppedSeconds += dt
-            if (consecutiveStoppedSeconds >= AUTO_PAUSE_CONFIRM_SECONDS) {
-                isAutoPausedInternal = true
+        if (isAutoPauseEnabled) {
+            if (!isMovingNow) {
+                consecutiveStoppedSeconds += dt
+                if (consecutiveStoppedSeconds >= AUTO_PAUSE_CONFIRM_SECONDS) {
+                    isAutoPausedInternal = true
+                }
+            } else {
+                if (currentFilteredSpeedKmh >= RESUME_SPEED_THRESHOLD_KMH || effectiveStepDist >= 1.5) {
+                    isAutoPausedInternal = false
+                    consecutiveStoppedSeconds = 0.0
+                }
             }
         } else {
-            if (currentFilteredSpeedKmh >= RESUME_SPEED_THRESHOLD_KMH || effectiveStepDist >= 2.0) {
-                isAutoPausedInternal = false
-                consecutiveStoppedSeconds = 0.0
-            }
+            isAutoPausedInternal = false
+            consecutiveStoppedSeconds = 0.0
         }
 
         // Update elapsed, moving, and paused time proportionally if timestamps advanced

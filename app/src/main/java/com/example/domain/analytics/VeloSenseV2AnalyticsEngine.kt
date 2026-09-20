@@ -711,50 +711,62 @@ object VeloSenseV2AnalyticsEngine {
             if (flatPoints.size >= 5) {
                 val mean = flatPoints.map { it.speedKmh }.average()
                 val stdDev = sqrt(flatPoints.map { (it.speedKmh - mean).pow(2) }.average())
-                // Lower standard deviation in flats = higher consistency
                 when {
-                    stdDev < 3.5 -> 24
-                    stdDev < 5.0 -> 21
-                    stdDev < 7.0 -> 18
-                    else -> 15
+                    stdDev < 3.0 -> 25
+                    stdDev < 4.5 -> 22
+                    stdDev < 6.5 -> 18
+                    stdDev < 9.0 -> 14
+                    else -> 10
                 }
-            } else 20
-        } else 20
+            } else 18
+        } else 14
 
         // Pillar 2: Pedaling & Coasting Efficiency (0..25)
         // Optimal: Pedaling on climbs & flats (>60%), Coasting effectively on descents (>15%)
         val pedalingEfficiencyScore = when {
-            pedaling.coastingTimePercent in 15.0..35.0 && pedaling.pedalingTimePercent >= 60.0 -> 24
-            pedaling.coastingTimePercent in 10.0..45.0 -> 21
-            pedaling.coastingTimePercent < 5.0 -> 16 // Overpedaling without resting
-            else -> 18
+            pedaling.coastingTimePercent in 15.0..35.0 && pedaling.pedalingTimePercent >= 60.0 -> 25
+            pedaling.coastingTimePercent in 10.0..45.0 && pedaling.pedalingTimePercent >= 50.0 -> 22
+            pedaling.coastingTimePercent < 5.0 -> 14 // Overpedaling without resting
+            pedaling.pedalingTimePercent < 40.0 -> 12 // Excessive coasting / low pedaling
+            else -> 17
         }
 
         // Pillar 3: Cadence & Fluidity (0..20)
         val cadenceScore = when {
-            ride.avgCadenceRpm in 75..92 -> 19
+            ride.avgCadenceRpm in 75..92 -> 20
             ride.avgCadenceRpm in 65..74 -> 17
-            ride.avgCadenceRpm > 92 -> 17
-            ride.avgCadenceRpm in 50..64 -> 14
-            else -> 15
+            ride.avgCadenceRpm > 92 -> 16
+            ride.avgCadenceRpm in 50..64 -> 13
+            ride.avgCadenceRpm in 1..49 -> 10
+            else -> 15 // Estimated default
         }
 
         // Pillar 4: Climb Management (0..15)
         val climbScore = if (grade.climbPercent > 5.0) {
             val ratio = if (power.flatPowerWatts > 0) power.climbPowerWatts.toDouble() / power.flatPowerWatts.toDouble() else 1.0
             when {
-                ratio in 1.15..1.60 -> 14 // Healthy power increase on climbs
-                ratio > 1.60 -> 12        // Spiking too hard on climbs
-                else -> 11
+                ratio in 1.15..1.60 -> 15 // Healthy power increase on climbs
+                ratio in 1.0..1.14 -> 13  // Mild climb power
+                ratio in 1.61..1.90 -> 11 // Spiking too hard on climbs
+                else -> 10
             }
         } else 14
 
         // Pillar 5: Effort & Wind Adaptation (0..15)
-        val adaptationScore = if (wind.isAvailable && wind.headwindPercent > 20.0) {
-            14
-        } else 13
+        val adaptationScore = if (wind.isAvailable) {
+            if (wind.headwindPercent > 20.0) {
+                if (power.variabilityIndex <= 1.25) 15 else 13
+            } else 14
+        } else {
+            if (power.variabilityIndex <= 1.20) 14 else 12
+        }
 
-        val total = (speedVarianceScore + pedalingEfficiencyScore + cadenceScore + climbScore + adaptationScore).coerceIn(40, 98)
+        val rawTotal = speedVarianceScore + pedalingEfficiencyScore + cadenceScore + climbScore + adaptationScore
+        val total = if (ride.distanceMeters < 1000.0 || ride.movingTimeSeconds < 180) {
+            (rawTotal * 0.75).roundToInt().coerceIn(10, 75)
+        } else {
+            rawTotal.coerceIn(10, 100)
+        }
 
         // Generate contextual headline
         val headline = when {

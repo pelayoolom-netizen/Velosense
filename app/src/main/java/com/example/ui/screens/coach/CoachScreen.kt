@@ -34,6 +34,7 @@ fun CoachScreen(
 ) {
     val messages by viewModel.messages.collectAsState()
     val isThinking by viewModel.isThinking.collectAsState()
+    val coachProfile by viewModel.coachProfile.collectAsState()
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -47,34 +48,57 @@ fun CoachScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(VeloDarkCard),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Psychology,
-                                contentDescription = null,
-                                tint = ElectricLime,
-                                modifier = Modifier.size(20.dp)
-                            )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(VeloDarkCard),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Psychology,
+                                    contentDescription = null,
+                                    tint = ElectricLime,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "VeloSense Coach",
+                                    style = VeloTypography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = VeloTextPrimary
+                                )
+                                Text(
+                                    "Entrenador y Director Deportivo",
+                                    style = VeloTypography.labelSmall,
+                                    color = ElectricLime
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                "VeloSense Coach",
-                                style = VeloTypography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = VeloTextPrimary
-                            )
-                            Text(
-                                "Director técnico y analista deportivo",
-                                style = VeloTypography.labelSmall,
-                                color = ElectricLime
-                            )
+
+                        coachProfile?.let { prof ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = VeloDarkSurface,
+                                border = BorderStroke(1.dp, ElectricLime.copy(alpha = 0.4f)),
+                                modifier = Modifier.padding(end = 12.dp)
+                            ) {
+                                Text(
+                                    text = prof.tier.badge,
+                                    style = VeloTypography.labelSmall.copy(fontSize = 11.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = ElectricLime,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
                         }
                     }
                 },
@@ -97,7 +121,53 @@ fun CoachScreen(
                     .widthIn(max = 760.dp)
                     .imePadding()
             ) {
-            // Chat message list
+                // Coach Profile Summary Bar
+                coachProfile?.let { prof ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = VeloDarkCard,
+                        border = BorderStroke(1.dp, VeloDarkCardBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "ESTADO DEL ENTRENADOR: ${prof.tier.label.uppercase()}",
+                                    style = VeloTypography.labelSmall.copy(fontSize = 9.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = ElectricLime
+                                )
+                                Text(
+                                    text = "${prof.trend} • ${prof.weeklyVolumeKm} km/sem • ${prof.preferredModality}",
+                                    style = VeloTypography.labelSmall.copy(fontSize = 11.sp),
+                                    color = VeloTextSecondary
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = ElectricLimeGlow
+                            ) {
+                                Text(
+                                    text = "${prof.consistencyScore}% regular",
+                                    style = VeloTypography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = ElectricLime,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Chat message list
             LazyColumn(
                 state = listState,
                 modifier = Modifier

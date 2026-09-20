@@ -48,13 +48,13 @@ data class RideDetailState(
     val climbs: List<DetectedClimb> = emptyList(),
     val comparison: ActivityComparisonResult? = null,
     val recordBadges: List<RideRecordBadge> = emptyList(),
+    val userProfile: com.example.data.database.entity.UserProfileEntity? = null,
+    val allRidesHistory: List<RideEntity> = emptyList(),
     val isLoading: Boolean = false,
     val isExportingGpx: Boolean = false,
     val gpxExportString: String? = null,
     val selectedTrackPointIndex: Int? = null,
-    val selectedActivityPoint: ActivityPointSelection? = null,
-    val isUploadingToStrava: Boolean = false,
-    val stravaMessage: String? = null
+    val selectedActivityPoint: ActivityPointSelection? = null
 )
 
 class HistoryViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,10 +62,6 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     private val app = application as VeloSenseApplication
     private val rideRepository = app.rideRepository
     private val bikeRepository = app.bikeRepository
-    val stravaAuthManager = app.stravaAuthManager
-    val stravaUploadManager = app.stravaUploadManager
-
-    val stravaAuthState = stravaAuthManager.authState
 
     val allRides: StateFlow<List<RideEntity>> = rideRepository.allRides
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -142,6 +138,8 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 }
             } else emptyList()
 
+            val userProfile = app.userRepository.getProfileDirect()
+
             _detailState.value = RideDetailState(
                 ride = ride,
                 trackPoints = points,
@@ -151,6 +149,8 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 climbs = climbs,
                 comparison = comparison,
                 recordBadges = recordBadges,
+                userProfile = userProfile,
+                allRidesHistory = allRides.value,
                 isLoading = false
             )
         }
@@ -293,36 +293,5 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             rideRepository.deleteRide(rideId)
         }
-    }
-
-    fun uploadCurrentRideToStrava() {
-        val rideId = _detailState.value.ride?.id ?: return
-        if (_detailState.value.isUploadingToStrava) return
-
-        _detailState.update { it.copy(isUploadingToStrava = true, stravaMessage = "Subiendo actividad a Strava...") }
-
-        viewModelScope.launch {
-            val result = stravaUploadManager.uploadRide(rideId, isAutomatic = false)
-            val updatedRide = rideRepository.getRideById(rideId)
-
-            val msg = when (result) {
-                is com.example.strava.StravaUploadResult.Success ->
-                    "¡Salida subida y procesada con éxito en Strava! (ID: ${result.activityId ?: result.uploadId})"
-                is com.example.strava.StravaUploadResult.Error ->
-                    "Error al sincronizar con Strava: ${result.message}"
-            }
-
-            _detailState.update { current ->
-                current.copy(
-                    ride = updatedRide ?: current.ride,
-                    isUploadingToStrava = false,
-                    stravaMessage = msg
-                )
-            }
-        }
-    }
-
-    fun clearStravaMessage() {
-        _detailState.update { it.copy(stravaMessage = null) }
     }
 }

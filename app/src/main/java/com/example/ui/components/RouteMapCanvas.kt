@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.location.LocationManager
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
@@ -195,6 +196,18 @@ fun RouteMapCanvas(
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                     setBackgroundColor(AndroidColor.parseColor("#0A0D12"))
+
+                    try {
+                        val jsCache = java.io.File(ctx.cacheDir, "WebView/Default/HTTP Cache/Code Cache/js")
+                        if (!jsCache.exists()) jsCache.mkdirs()
+                        val wasmCache = java.io.File(ctx.cacheDir, "WebView/Default/HTTP Cache/Code Cache/wasm")
+                        if (!wasmCache.exists()) wasmCache.mkdirs()
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+
+                    // Avoid MESA / GPU rendernode errors on emulated or virtual graphic nodes
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
                     settings.apply {
                         javaScriptEnabled = true

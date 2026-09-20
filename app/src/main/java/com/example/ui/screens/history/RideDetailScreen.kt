@@ -45,7 +45,6 @@ fun RideDetailScreen(
 ) {
     val context = LocalContext.current
     val detailState by viewModel.detailState.collectAsState()
-    val stravaAuthState by viewModel.stravaAuthState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameText by remember { mutableStateOf("") }
@@ -78,27 +77,6 @@ fun RideDetailScreen(
                     }
                 },
                 actions = {
-                    // Strava sync action
-                    IconButton(
-                        onClick = { viewModel.uploadCurrentRideToStrava() },
-                        enabled = !detailState.isUploadingToStrava,
-                        modifier = Modifier.testTag("btn_topbar_strava_sync")
-                    ) {
-                        if (detailState.isUploadingToStrava) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = StravaOrange
-                            )
-                        } else {
-                            val isSynced = ride?.stravaUploadStatus == "SYNCED"
-                            Icon(
-                                if (isSynced) Icons.Default.CloudDone else Icons.Default.CloudUpload,
-                                contentDescription = if (isSynced) "Sincronizado con Strava" else "Subir a Strava",
-                                tint = if (isSynced) StravaOrange else VeloTextSecondary
-                            )
-                        }
-                    }
                     // Rename button
                     IconButton(onClick = {
                         ride?.let {
@@ -206,18 +184,6 @@ fun RideDetailScreen(
                 item {
                     VelosenseScoreCard(scoreAnalysis = score)
                 }
-            }
-
-            // Tarjeta de Integración Strava
-            item {
-                StravaRideSyncCard(
-                    ride = ride,
-                    isUploading = detailState.isUploadingToStrava,
-                    isConnected = stravaAuthState.isConnected,
-                    message = detailState.stravaMessage,
-                    onUploadClick = { viewModel.uploadCurrentRideToStrava() },
-                    onClearMessage = { viewModel.clearStravaMessage() }
-                )
             }
 
             // 2. Resumen de Salida (Primary Metrics)
@@ -452,12 +418,14 @@ fun RideDetailScreen(
 
             // 10. Informe Técnico VeloSense Coach
             item {
-                val coachReport = remember(ride, detailState.v2Analysis, detailState.comparison, detailState.recordBadges) {
+                val coachReport = remember(ride, detailState.v2Analysis, detailState.comparison, detailState.recordBadges, detailState.userProfile, detailState.allRidesHistory) {
                     CoachManager().generateCoachReport(
                         ride = ride,
                         analysis = detailState.v2Analysis,
                         comparison = detailState.comparison,
-                        recordBadges = detailState.recordBadges
+                        recordBadges = detailState.recordBadges,
+                        userProfile = detailState.userProfile,
+                        historicalRides = detailState.allRidesHistory
                     )
                 }
                 VeloSenseCoachReportCard(
@@ -843,193 +811,5 @@ private fun formatRideDuration(seconds: Long): String {
     val m = (seconds % 3600) / 60
     val s = seconds % 60
     return if (h > 0) String.format(Locale.US, "%d:%02d:%02d", h, m, s) else String.format(Locale.US, "%02d:%02d", m, s)
-}
-
-@Composable
-private fun StravaRideSyncCard(
-    ride: RideEntity,
-    isUploading: Boolean,
-    isConnected: Boolean,
-    message: String?,
-    onUploadClick: () -> Unit,
-    onClearMessage: () -> Unit
-) {
-    val context = LocalContext.current
-    val isSynced = ride.stravaUploadStatus == "SYNCED"
-    val isFailed = ride.stravaUploadStatus == "FAILED"
-    val isPending = ride.stravaUploadStatus == "PENDING_STRAVA_UPLOAD"
-
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = VeloDarkCard,
-        border = BorderStroke(
-            1.dp,
-            when {
-                isSynced -> StravaOrange.copy(alpha = 0.5f)
-                isFailed -> VeloError.copy(alpha = 0.5f)
-                else -> VeloDarkCardBorder
-            }
-        ),
-        modifier = Modifier.fillMaxWidth().testTag("card_ride_strava_sync")
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = CircleShape,
-                        color = StravaOrange,
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("S", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text("Strava Sync", style = VeloTypography.titleMedium, color = VeloTextPrimary, fontWeight = FontWeight.Bold)
-                        Text(
-                            when {
-                                isSynced -> "Actividad verificada y sincronizada"
-                                isFailed -> "Error en el último intento"
-                                isPending -> "Pendiente de sincronización automática"
-                                else -> "Exportación GPX oficial"
-                            },
-                            style = VeloTypography.labelSmall,
-                            color = when {
-                                isSynced -> ElectricLime
-                                isFailed -> VeloError
-                                else -> VeloTextSecondary
-                            }
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = when {
-                        isSynced -> ElectricLimeGlow
-                        isFailed -> VeloError.copy(alpha = 0.15f)
-                        isUploading -> StravaOrange.copy(alpha = 0.15f)
-                        else -> VeloDarkSurface
-                    },
-                    border = when {
-                        isSynced -> BorderStroke(1.dp, ElectricLime.copy(alpha = 0.5f))
-                        isFailed -> BorderStroke(1.dp, VeloError.copy(alpha = 0.5f))
-                        else -> null
-                    }
-                ) {
-                    Text(
-                        text = when {
-                            isUploading -> "Subiendo..."
-                            isSynced -> "Sincronizado ✓"
-                            isFailed -> "Fallido"
-                            isPending -> "En cola"
-                            else -> "No subido"
-                        },
-                        style = VeloTypography.labelSmall,
-                        color = when {
-                            isUploading -> StravaOrange
-                            isSynced -> ElectricLime
-                            isFailed -> VeloError
-                            else -> VeloTextMuted
-                        },
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Mensaje de feedback si existe
-            message?.let { msg ->
-                Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = VeloDarkSurface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(msg, style = VeloTypography.labelSmall, color = VeloTextPrimary, modifier = Modifier.weight(1f))
-                        IconButton(onClick = onClearMessage, modifier = Modifier.size(20.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = VeloTextMuted, modifier = Modifier.size(14.dp))
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (isSynced) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (ride.stravaActivityId != null) "ID de Actividad: #${ride.stravaActivityId}" else "Subido a tu feed",
-                        style = VeloTypography.labelSmall,
-                        color = VeloTextSecondary
-                    )
-
-                    if (ride.stravaActivityId != null) {
-                        OutlinedButton(
-                            onClick = {
-                                val url = "https://www.strava.com/activities/${ride.stravaActivityId}"
-                                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(browserIntent)
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = StravaOrange),
-                            border = BorderStroke(1.dp, StravaOrange.copy(alpha = 0.5f)),
-                            modifier = Modifier.testTag("btn_open_in_strava")
-                        ) {
-                            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Ver en Strava", style = VeloTypography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (!isConnected) "Requiere conectar Strava en Ajustes" else "Sube tu salida con formato GPX oficial",
-                        style = VeloTypography.labelSmall,
-                        color = VeloTextSecondary,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Button(
-                        onClick = onUploadClick,
-                        enabled = !isUploading,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StravaOrange,
-                            contentColor = Color.White
-                        ),
-                        modifier = Modifier.testTag("btn_upload_to_strava")
-                    ) {
-                        if (isUploading) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color.White)
-                        } else {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (isFailed) "Reintentar" else "Subir a Strava", style = VeloTypography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 

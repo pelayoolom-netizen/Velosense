@@ -34,17 +34,20 @@
 
     <!-- Information Banner -->
     <section class="banner">
-      <h2>⚡ ¡Tu APK Nativa ya está compilada y lista!</h2>
+      <h2>⚡ ¡Tu APK Nativa ya está compilada y en la raíz del proyecto!</h2>
       <p>
-        Este proyecto es una aplicación nativa de Android desarrollada en <strong>Kotlin & Jetpack Compose</strong>. Si descargaste el proyecto como ZIP o usas un conversor web (Web2APK, Cordova, etc.), a continuación tienes las formas directas de instalar el APK.
+        El archivo instalador <strong>VeloSense.apk</strong> se encuentra directamente en la raíz de los archivos de este proyecto. Puedes descargarlo directamente haciendo clic en el siguiente botón o desde la lista de archivos:
       </p>
+      <a href="VeloSense.apk" download="VeloSense.apk" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; padding: 14px 20px; font-size: 1.05rem; font-weight: 800; border-radius: 12px; margin-top: 8px; box-shadow: 0 4px 14px rgba(0, 229, 255, 0.4);">
+        <span style="font-size: 1.3rem;">📲</span> <span>Descargar VeloSense.apk (Instalador Android)</span>
+      </a>
     </section>
 
     <!-- Guide to get APK -->
     <section class="card">
       <div class="card-title">
         <span>📦</span>
-        <h3>¿Cómo obtener e instalar el archivo APK?</h3>
+        <h3>Ubicación del archivo APK en el proyecto</h3>
       </div>
 
       <div class="step-list">
@@ -52,9 +55,15 @@
         <div class="step-item">
           <div class="step-num">1</div>
           <div class="step-content">
-            <div class="step-title">Descarga directa desde Google AI Studio</div>
+            <div class="step-title">En la raíz de los archivos del proyecto</div>
             <div class="step-desc">
-              En la esquina superior derecha de AI Studio, haz clic en el menú de <strong>Configuración / Exportar</strong> y selecciona <strong>"Generate APK / Download APK"</strong>. Te descargará el instalador directamente en tu teléfono u ordenador sin necesidad de convertir nada.
+              El instalador Android APK está generado y listo directamente en la raíz de tu proyecto:
+            </div>
+            <div class="code-box">./VeloSense.apk</div>
+            <div class="code-box">./app-debug.apk</div>
+            <div class="code-box">./public/VeloSense.apk</div>
+            <div class="step-desc" style="margin-top: 4px;">
+              Al exportar el proyecto o explorar sus archivos, solo toma <strong>VeloSense.apk</strong> y envíalo a tu móvil Android para instalarlo.
             </div>
           </div>
         </div>
@@ -63,15 +72,11 @@
         <div class="step-item">
           <div class="step-num">2</div>
           <div class="step-content">
-            <div class="step-title">Ubicación del APK ya compilado en el ZIP</div>
+            <div class="step-title">Ubicación estándar de compilación de Gradle</div>
             <div class="step-desc">
-              Si descomprimes el archivo ZIP en tu ordenador, el archivo <code>.apk</code> ya se encuentra generado en las siguientes rutas:
+              También conservas la ruta estándar generada por Gradle:
             </div>
             <div class="code-box">app/build/outputs/apk/debug/app-debug.apk</div>
-            <div class="code-box">.build-outputs/app-debug.apk</div>
-            <div class="step-desc" style="margin-top: 4px;">
-              ¡Simplemente copia ese archivo <strong>app-debug.apk</strong> a tu móvil Android e instálalo!
-            </div>
           </div>
         </div>
 
@@ -93,7 +98,7 @@
           <div class="step-content">
             <div class="step-title">Uso con Conversores Web-to-APK (Website 2 APK, AppsGeyser, etc.)</div>
             <div class="step-desc">
-              Si estás subiendo el ZIP a una plataforma de conversión que exige un <code>index.html</code>, este archivo cumple con todos los requisitos necesarios para empaquetar la aplicación en un WebView con pantalla completa y soporte táctil.
+              Si estás subiendo el proyecto a una plataforma de conversión que exige un <code>index.html</code> en la raíz, el archivo <code>index.html</code> ya está en el nivel superior y también dispones de <code>velosense-builder.zip</code>.
             </div>
           </div>
         </div>
